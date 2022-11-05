@@ -22,16 +22,18 @@ pub mod airtable_keyword_label_provider {
     #[derive(Debug, Serialize, Deserialize, Clone)]
     pub struct AirtableKeywordLabel{
         #[serde(default)]
-        Keyword: String,
+        #[serde(rename = "keyword")]
+        keyword: String,
         #[serde(default)]
-        Label: String
+        #[serde(rename = "label")]
+        label: String
     }
 
     impl From<AirtableKeywordLabel> for KeywordLabelCombo{
         fn from(a: AirtableKeywordLabel) -> Self {
             Self {
-              Keyword: a.Keyword,
-              Label: a.Label
+              keyword: a.keyword,
+              label: a.label
             }
           }
     }
@@ -54,7 +56,7 @@ pub mod airtable_keyword_label_provider {
                 let airtable_response = res.json::<AirtableResponse>().await.unwrap();
                 let result : Vec<KeywordLabelCombo> = airtable_response.records.array
                     .iter()
-                    .map(|a| KeywordLabelCombo{Keyword: String::from(&a.fields.Keyword), Label: String::from(&a.fields.Label)})
+                    .map(|a| KeywordLabelCombo{ keyword: String::from(&a.fields.keyword), label: String::from(&a.fields.label)})
                     .collect();
                 result
 

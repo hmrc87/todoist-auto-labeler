@@ -1,14 +1,14 @@
 pub mod todoist_api_adapter {
     use serde_derive::{Serialize, Deserialize};
 
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize,  Clone)]
     pub struct TodoistTask {
         pub project_id: String,
         pub content: String,
         pub labels: Vec<String>,
         pub id: String,
     }
-    #[derive(Debug, Serialize, Deserialize)]
+    #[derive(Debug, Serialize, Deserialize,  Clone)]
     pub struct UpdateTodoistTask {
         id: String,
         labels: Vec<String>,
@@ -34,11 +34,11 @@ pub mod todoist_api_adapter {
         
         
         let all_tasks =  response.unwrap().json::<Vec<TodoistTask>>().await.unwrap();
-        let filterted_tasks = all_tasks
+        let filtered_tasks = all_tasks
                             .into_iter()
                             .filter(|x| x.project_id.eq(&project_id.to_string()))
                             .collect::<Vec<TodoistTask>>();
-        filterted_tasks
+        filtered_tasks
     }
 
     pub async fn update_todoist_task(task: &UpdateTodoistTask, token: &str) -> bool {
