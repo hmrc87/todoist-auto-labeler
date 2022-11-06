@@ -36,15 +36,16 @@ async fn main() {
 
     let todoist_tasks = get_todoist_tasks(&todoist_project_id, &todoist_token).await;
     println!("Active Todoist-Task count: {}", todoist_tasks.len());
-    let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
+    //let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
 
-    let updated_todoist_tasks = update_todoist_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
+    let updated_todoist_tasks = update_todoist_labels(todoist_tasks, keyword_label_combos);
 
     for updated_task in updated_todoist_tasks {
         update_todoist_task(&updated_task, &todoist_token).await;
     }
 }
 
+// TODO: check why this is not working
 fn filter_label(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
     let mut updated_tasks = Vec::new();
     for task in tasks {
@@ -66,6 +67,7 @@ fn update_todoist_labels(
 
         match matched_keyword {
             Some(combo) => {
+                println!("Matched keyword: {:?}", matched_keyword);
                 let mut do_push_label = true;
                 for label in &task.labels {
                     if label.contains(&combo.label) {
@@ -91,7 +93,9 @@ fn get_match<'a>(
     keyword_label_combos: &'a Vec<KeywordLabelCombo>,
 ) -> Option<&'a KeywordLabelCombo> {
     for keyword_label_combo in keyword_label_combos.iter() {
-        println!("{:?}", keyword_label_combo);
+        if keyword_label_combo.keyword == "" {
+            continue;
+        }
         let regex = Regex::new(&keyword_label_combo.keyword);
         match regex {
             Ok(res) => match res.find(search_term) {
