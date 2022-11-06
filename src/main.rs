@@ -1,6 +1,8 @@
 extern crate dotenv;
 extern crate hyper;
 extern crate hyper_rustls;
+extern crate regex;
+use regex::Regex;
 
 mod todoist_api_adapter;
 use crate::todoist_api_adapter::todoist_api_adapter::*;
@@ -33,15 +35,17 @@ async fn main() {
     println!("keyword-label combo count: {}", keyword_label_combos.len());
 
     let todoist_tasks = get_todoist_tasks(&todoist_project_id, &todoist_token).await;
-    let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
+    println!("Active Todoist-Task count: {}", todoist_tasks.len());
+    //let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
 
-    let updated_todoist_tasks = update_todoist_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
+    let updated_todoist_tasks = update_todoist_labels(todoist_tasks, keyword_label_combos);
 
     for updated_task in updated_todoist_tasks {
         update_todoist_task(&updated_task, &todoist_token).await;
     }
 }
 
+// TODO: check why this is not working
 fn filter_label(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
     let mut updated_tasks = Vec::new();
     for task in tasks {
@@ -63,6 +67,7 @@ fn update_todoist_labels(
 
         match matched_keyword {
             Some(combo) => {
+                println!("Matched keyword: {:?}", matched_keyword);
                 let mut do_push_label = true;
                 for label in &task.labels {
                     if label.contains(&combo.label) {
@@ -85,15 +90,59 @@ fn update_todoist_labels(
 
 fn get_match<'a>(
     search_term: &str,
-    keyword_label_combos: &'a [KeywordLabelCombo],
+    keyword_label_combos: &'a Vec<KeywordLabelCombo>,
 ) -> Option<&'a KeywordLabelCombo> {
-    for keyword_label_combo in keyword_label_combos {
-        if search_term
-            .to_lowercase()
-            .contains(&keyword_label_combo.keyword.to_lowercase())
-        {
-            return Some(keyword_label_combo);
+    for keyword_label_combo in keyword_label_combos.iter() {
+        if keyword_label_combo.keyword == "" {
+            continue;
         }
+        let regex = Regex::new(&keyword_label_combo.keyword);
+        match regex {
+            Ok(res) => match res.find(search_term) {
+                Some(_) => return Some(keyword_label_combo),
+                None =>  continue
+            },
+            Err(_) => return None,
+        }
+        
     }
     return None;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{KeywordLabelCombo, get_match};
+
+
+    #[test]
+    fn it_matches() {
+        
+        // Arrange
+        let search_term = "Bananen";
+        let mut keyword_label_combos = Vec::new();
+
+        let combo_1 = KeywordLabelCombo{
+            keyword : String::from("(?i)Bananen"),
+            label : String::from("Obst"),
+        };
+
+        let combo_2 = KeywordLabelCombo{
+            keyword : String::from("(?i)Erdbeere"),
+            label : String::from("Obst"),
+        };
+
+        let combo1_clone = combo_1.clone();
+
+        keyword_label_combos.push(combo_2);
+        keyword_label_combos.push(combo_1);
+
+        // Act
+        let result = get_match(search_term, &keyword_label_combos)
+                    .unwrap();
+
+        // Assert
+        
+        assert_eq!(&result.keyword, &combo1_clone.keyword);
+    }
+}
+

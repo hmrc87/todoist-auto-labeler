@@ -22,10 +22,10 @@ pub mod airtable_keyword_label_provider {
     #[derive(Debug, Serialize, Deserialize, Clone)]
     pub struct AirtableKeywordLabel{
         #[serde(default)]
-        #[serde(rename = "keyword")]
+        #[serde(rename = "Keyword")]
         keyword: String,
         #[serde(default)]
-        #[serde(rename = "label")]
+        #[serde(rename = "Label")]
         label: String
     }
 
