@@ -85,7 +85,7 @@ fn update_todoist_labels(
 
 fn get_match<'a>(
     search_term: &str,
-    keyword_label_combos: &'a [KeywordLabelCombo],
+    keyword_label_combos: &'a Vec<KeywordLabelCombo>,
 ) -> Option<&'a KeywordLabelCombo> {
     for keyword_label_combo in keyword_label_combos {
         if search_term
@@ -97,3 +97,41 @@ fn get_match<'a>(
     }
     return None;
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{KeywordLabelCombo, get_match};
+
+
+    #[test]
+    fn it_matches() {
+        
+        // Arrange
+        let search_term = "(?i)Banane";
+        let mut keyword_label_combos = Vec::new();
+
+        let combo_1 = KeywordLabelCombo{
+            keyword : String::from("bananen"),
+            label : String::from("Obst"),
+        };
+
+        let combo_2 = KeywordLabelCombo{
+            keyword : String::from("Erdbeeren"),
+            label : String::from("Obst"),
+        };
+
+        let combo1_clone = combo_1.clone();
+
+        keyword_label_combos.push(combo_1);
+        keyword_label_combos.push(combo_2);
+
+        // Act
+        let result = get_match(search_term, &keyword_label_combos)
+                    .unwrap();
+
+        // Assert
+        
+        assert_eq!(&result.keyword, &combo1_clone.keyword);
+    }
+}
+
