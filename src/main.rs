@@ -1,6 +1,8 @@
 extern crate dotenv;
 extern crate hyper;
 extern crate hyper_rustls;
+extern crate regex;
+use regex::Regex;
 
 mod todoist_api_adapter;
 use crate::todoist_api_adapter::todoist_api_adapter::*;
@@ -33,6 +35,7 @@ async fn main() {
     println!("keyword-label combo count: {}", keyword_label_combos.len());
 
     let todoist_tasks = get_todoist_tasks(&todoist_project_id, &todoist_token).await;
+    println!("Active Todoist-Task count: {}", todoist_tasks.len());
     let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
 
     let updated_todoist_tasks = update_todoist_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
@@ -87,13 +90,17 @@ fn get_match<'a>(
     search_term: &str,
     keyword_label_combos: &'a Vec<KeywordLabelCombo>,
 ) -> Option<&'a KeywordLabelCombo> {
-    for keyword_label_combo in keyword_label_combos {
-        if search_term
-            .to_lowercase()
-            .contains(&keyword_label_combo.keyword.to_lowercase())
-        {
-            return Some(keyword_label_combo);
+    for keyword_label_combo in keyword_label_combos.iter() {
+        println!("{:?}", keyword_label_combo);
+        let regex = Regex::new(&keyword_label_combo.keyword);
+        match regex {
+            Ok(res) => match res.find(search_term) {
+                Some(_) => return Some(keyword_label_combo),
+                None =>  continue
+            },
+            Err(_) => return None,
         }
+        
     }
     return None;
 }
@@ -107,23 +114,23 @@ mod tests {
     fn it_matches() {
         
         // Arrange
-        let search_term = "(?i)Banane";
+        let search_term = "Bananen";
         let mut keyword_label_combos = Vec::new();
 
         let combo_1 = KeywordLabelCombo{
-            keyword : String::from("bananen"),
+            keyword : String::from("(?i)Bananen"),
             label : String::from("Obst"),
         };
 
         let combo_2 = KeywordLabelCombo{
-            keyword : String::from("Erdbeeren"),
+            keyword : String::from("(?i)Erdbeere"),
             label : String::from("Obst"),
         };
 
         let combo1_clone = combo_1.clone();
 
-        keyword_label_combos.push(combo_1);
         keyword_label_combos.push(combo_2);
+        keyword_label_combos.push(combo_1);
 
         // Act
         let result = get_match(search_term, &keyword_label_combos)
