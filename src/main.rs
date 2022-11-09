@@ -18,7 +18,15 @@ pub struct KeywordLabelCombo {
 
 #[tokio::main]
 async fn main() {
-    // Read from .env file if available
+    println!(r"
+        _______        _       _     _                      _        _       _          _           
+       |__   __|      | |     (_)   | |          /\        | |      | |     | |        | |          
+          | | ___   __| | ___  _ ___| |_        /  \  _   _| |_ ___ | | __ _| |__   ___| | ___ _ __ 
+          | |/ _ \ / _` |/ _ \| / __| __|      / /\ \| | | | __/ _ \| |/ _` | '_ \ / _ \ |/ _ \ '__|
+          | | (_) | (_| | (_) | \__ \ |_      / ____ \ |_| | || (_) | | (_| | |_) |  __/ |  __/ |   
+          |_|\___/ \__,_|\___/|_|___/\__|    /_/    \_\__,_|\__\___/|_|\__,_|_.__/ \___|_|\___|_| 
+          version 1.0                                                                                                                                                                                           
+      ");
     dotenv::dotenv().ok();
 
     let todoist_token = std::env::var("todoist_bearer_token")
@@ -32,21 +40,21 @@ async fn main() {
 
     let keyword_label_combos = get_keyword_label_combos(&airtable_base_url, &airtable_token).await;
 
-    println!("keyword-label combo count: {}", keyword_label_combos.len());
+    println!("Airtable Keyword-label-combo count: {}", keyword_label_combos.len());
 
     let todoist_tasks = get_todoist_tasks(&todoist_project_id, &todoist_token).await;
     println!("Active Todoist-Task count: {}", todoist_tasks.len());
-    //let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
+    let todoist_tasks_without_alexa_label = remove_label_from_tasks("Alexa", todoist_tasks);
 
-    let updated_todoist_tasks = update_todoist_labels(todoist_tasks, keyword_label_combos);
+    let updated_todoist_tasks = update_todoist_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
 
     for updated_task in updated_todoist_tasks {
         update_todoist_task(&updated_task, &todoist_token).await;
     }
 }
 
-// TODO: check why this is not working
-fn filter_label(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
+
+fn remove_label_from_tasks(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
     let mut updated_tasks = Vec::new();
     for task in tasks {
         let mut updated_task = task.clone();
@@ -67,24 +75,26 @@ fn update_todoist_labels(
 
         match matched_keyword {
             Some(combo) => {
-                println!("Matched keyword: {:?}", matched_keyword);
-                let mut do_push_label = true;
+                println!("Matched keyword: {:?} with task {:?}", matched_keyword.unwrap().keyword, task.content);
+                let mut push_new_label = true;
+                
                 for label in &task.labels {
                     if label.contains(&combo.label) {
-                        do_push_label = false;
+                        push_new_label = false;
                         continue;
                     };
                 }
 
-                if do_push_label {
+                if push_new_label {
                     task.labels.push(String::from(&combo.label));
-                    updated_todoist_tasks.push(UpdateTodoistTask::from(task));
                 }
+
+                updated_todoist_tasks.push(UpdateTodoistTask::from(task));
             }
             None => {}
         }
     }
-    println!("Updating : {} tasks.", updated_todoist_tasks.len());
+    println!("Updating {} task(s) ...", updated_todoist_tasks.len());
     updated_todoist_tasks
 }
 
@@ -112,7 +122,6 @@ fn get_match<'a>(
 #[cfg(test)]
 mod tests {
     use crate::{KeywordLabelCombo, get_match};
-
 
     #[test]
     fn it_matches() {
