@@ -25,7 +25,7 @@ async fn main() {
           | |/ _ \ / _` |/ _ \| / __| __|      / /\ \| | | | __/ _ \| |/ _` | '_ \ / _ \ |/ _ \ '__|
           | | (_) | (_| | (_) | \__ \ |_      / ____ \ |_| | || (_) | | (_| | |_) |  __/ |  __/ |   
           |_|\___/ \__,_|\___/|_|___/\__|    /_/    \_\__,_|\__\___/|_|\__,_|_.__/ \___|_|\___|_| 
-          version 1.0                                                                                                                                                                                           
+          version 1.0 (A simple tool to automatically add labels to Todoist tasks and learn Rust :D)                                                                                                                                                                                           
       ");
     dotenv::dotenv().ok();
 
@@ -44,17 +44,17 @@ async fn main() {
 
     let todoist_tasks = get_todoist_tasks(&todoist_project_id, &todoist_token).await;
     println!("Active Todoist-Task count: {}", todoist_tasks.len());
-    let todoist_tasks_without_alexa_label = remove_label_from_tasks("Alexa", todoist_tasks);
+    let todoist_tasks_without_alexa_label = filter_label("Alexa", todoist_tasks);
 
-    let updated_todoist_tasks = update_todoist_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
+    let updated_todoist_tasks = update_labels(todoist_tasks_without_alexa_label, keyword_label_combos);
 
     for updated_task in updated_todoist_tasks {
         update_todoist_task(&updated_task, &todoist_token).await;
     }
 }
 
-
-fn remove_label_from_tasks(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
+fn filter_label(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistTask> {
+    println!("removing label {} from all tasks", label);
     let mut updated_tasks = Vec::new();
     for task in tasks {
         let mut updated_task = task.clone();
@@ -64,13 +64,13 @@ fn remove_label_from_tasks(label: &str, tasks: Vec<TodoistTask>) -> Vec<TodoistT
     updated_tasks
 }
 
-fn update_todoist_labels(
-    original_todoist_tasks: Vec<TodoistTask>,
+fn update_labels(
+    tasks: Vec<TodoistTask>,
     keyword_label_combos: Vec<KeywordLabelCombo>,
 ) -> Vec<UpdateTodoistTask> {
-    let mut updated_todoist_tasks: Vec<UpdateTodoistTask> = Vec::new();
+    let mut updated_tasks: Vec<UpdateTodoistTask> = Vec::new();
 
-    for mut task in original_todoist_tasks {
+    for mut task in tasks {
         let matched_keyword = get_match(&task.content, &keyword_label_combos);
 
         match matched_keyword {
@@ -89,13 +89,13 @@ fn update_todoist_labels(
                     task.labels.push(String::from(&combo.label));
                 }
 
-                updated_todoist_tasks.push(UpdateTodoistTask::from(task));
+                updated_tasks.push(UpdateTodoistTask::from(task));
             }
             None => {}
         }
     }
-    println!("Updating {} task(s) ...", updated_todoist_tasks.len());
-    updated_todoist_tasks
+    println!("Updating {} task(s) ...", updated_tasks.len());
+    updated_tasks
 }
 
 fn get_match<'a>(
@@ -124,34 +124,33 @@ mod tests {
     use crate::{KeywordLabelCombo, get_match};
 
     #[test]
-    fn it_matches() {
+    fn get_match_matches() {
         
         // Arrange
-        let search_term = "Bananen";
+        let search_term = "Bananas";
         let mut keyword_label_combos = Vec::new();
 
-        let combo_1 = KeywordLabelCombo{
-            keyword : String::from("(?i)Bananen"),
-            label : String::from("Obst"),
+        let banana_combo = KeywordLabelCombo{
+            keyword : String::from("(?i)Banana"),
+            label : String::from("Fruits"),
         };
 
-        let combo_2 = KeywordLabelCombo{
-            keyword : String::from("(?i)Erdbeere"),
-            label : String::from("Obst"),
+        let tomato_combo = KeywordLabelCombo{
+            keyword : String::from("(?i)Tomato"),
+            label : String::from("Fruits(seriously!)"),
         };
 
-        let combo1_clone = combo_1.clone();
+        let banana_clone = banana_combo.clone();
 
-        keyword_label_combos.push(combo_2);
-        keyword_label_combos.push(combo_1);
+        keyword_label_combos.push(tomato_combo);
+        keyword_label_combos.push(banana_combo);
 
         // Act
         let result = get_match(search_term, &keyword_label_combos)
                     .unwrap();
 
         // Assert
-        
-        assert_eq!(&result.keyword, &combo1_clone.keyword);
+        assert_eq!(&result.keyword, &banana_clone.keyword);
     }
 }
 
