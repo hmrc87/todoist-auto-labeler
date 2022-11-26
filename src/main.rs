@@ -106,7 +106,8 @@ fn get_match<'a>(
         if keyword_label_combo.keyword == "" {
             continue;
         }
-        let regex = Regex::new(&keyword_label_combo.keyword);
+        let regex_string = "(?i)".to_owned() + &keyword_label_combo.keyword;
+        let regex = Regex::new(&regex_string);
         match regex {
             Ok(res) => match res.find(search_term) {
                 Some(_) => return Some(keyword_label_combo),
@@ -131,12 +132,12 @@ mod tests {
         let mut keyword_label_combos = Vec::new();
 
         let banana_combo = KeywordLabelCombo{
-            keyword : String::from("(?i)Banana"),
+            keyword : String::from("banana"),
             label : String::from("Fruits"),
         };
 
         let tomato_combo = KeywordLabelCombo{
-            keyword : String::from("(?i)Tomato"),
+            keyword : String::from("Tomato"),
             label : String::from("Fruits(seriously!)"),
         };
 
