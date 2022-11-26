@@ -5,6 +5,8 @@ pub mod airtable_keyword_label_provider {
     #[derive(Debug, Serialize, Deserialize)]
     pub struct AirtableResponse {
         records: Records,
+        #[serde(default)]
+        offset: String,
     }
 
     #[derive(Debug, Serialize, Deserialize)]
@@ -42,27 +44,64 @@ pub mod airtable_keyword_label_provider {
         airtable_token: &str,
     ) -> Vec<KeywordLabelCombo> {
         let client: reqwest::Client = reqwest::Client::new();
+       
+        let mut final_results = Vec::new();
 
-        // TODO: 100 values max -> if we have more we need to use use pagination
         let response = client
             .get(airtable_url)
             .header("Authorization", "Bearer ".to_owned() + &airtable_token)
             .send()
-            .await;
-
+            .await;      
+        
         match response {
             Ok(res) => {
-                let airtable_response = res.json::<AirtableResponse>().await.unwrap();
-                let result: Vec<KeywordLabelCombo> = airtable_response
-                    .records
-                    .array
-                    .iter()
-                    .map(|a| KeywordLabelCombo {
-                        keyword: String::from(&a.fields.keyword),
-                        label: String::from(&a.fields.label),
-                    })
-                    .collect();
-                result
+                let response = res.json::<AirtableResponse>().await.unwrap();
+                final_results.extend(
+                    response
+                        .records
+                        .array
+                        .iter()
+                        .map(|a| KeywordLabelCombo {
+                            keyword: String::from(&a.fields.keyword),
+                            label: String::from(&a.fields.label),
+                        })
+                        .collect::<Vec::<KeywordLabelCombo>>(),
+                );
+
+                let mut offset = response.offset;               
+                while !offset.is_empty() {
+                    
+                    let url = airtable_url.to_owned() + "&offset=" + &offset;
+                    let res = client
+                        .get(url)
+                        .header("Authorization", "Bearer ".to_owned() + &airtable_token)
+                        .send()
+                        .await;
+
+                    match res {
+                        Ok(res) => {
+                            let response = res.json::<AirtableResponse>().await.unwrap();
+                            final_results.extend(
+                                response
+                                    .records
+                                    .array
+                                    .iter()
+                                    .map(|a| KeywordLabelCombo {
+                                        keyword: String::from(&a.fields.keyword),
+                                        label: String::from(&a.fields.label),
+                                    })
+                                    .collect::<Vec::<KeywordLabelCombo>>(),
+                            );
+                            offset = response.offset
+                        }
+                        Err(e) => {
+                            println!("Error retrieving Airtable data: {:?}", e);
+                            return Vec::<KeywordLabelCombo>::with_capacity(1);
+                        }
+                    }
+                }
+
+                final_results
             }
             Err(e) => {
                 println!("Error retrieving Airtable data: {:?}", e);
