@@ -33,8 +33,8 @@ async fn main() {
         .expect("todoist_bearer_token environment variable must be set.");
     let todoist_project_id = std::env::var("todoist_project_id")
         .expect("todoist_project_id environment variable must be set.");
-    let airtable_token: String = std::env::var("airtable_api_key")
-        .expect("airtable_api_key environment variable must be set.");
+    let airtable_token: String = std::env::var("airtable_pat")
+        .expect("airtable_pat environment variable must be set.");
     let airtable_base_url: String = std::env::var("airtable_base_url")
         .expect("airtable_base_url environment variable must be set.");
 
